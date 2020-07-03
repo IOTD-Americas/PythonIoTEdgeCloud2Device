@@ -1,0 +1,109 @@
+{
+  "$schema-template": "2.0.0",
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {
+              "iotgbb": {
+                "username": "$CONTAINER_REGISTRY_USERNAME_iotgbb",
+                "password": "$CONTAINER_REGISTRY_PASSWORD_iotgbb",
+                "address": "iotgbb.azurecr.io"
+              }
+            }
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "createOptions": {}
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "5671/tcp": [
+                      {
+                        "HostPort": "5671"
+                      }
+                    ],
+                    "8883/tcp": [
+                      {
+                        "HostPort": "8883"
+                      }
+                    ],
+                    "443/tcp": [
+                      {
+                        "HostPort": "443"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "modules": {
+          "PythonC2DeviceMessage": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.PythonC2DeviceMessage.debug}",
+              "createOptions": {
+                "ExposedPorts": {
+                  "5678/tcp": {}
+                },
+                "HostConfig": {
+                  "PortBindings": {
+                    "5678/tcp": [
+                      {
+                        "HostPort": "5678"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "SimulatedTemperatureSensor": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-simulated-temperature-sensor:1.0",
+              "createOptions": {}
+            }
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "routes": {
+          "PythonC2DeviceMessageToIoTHub": "FROM /messages/modules/PythonC2DeviceMessage/outputs/* INTO $upstream",
+          "sensorToPythonC2DeviceMessage": "FROM /messages/modules/SimulatedTemperatureSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/PythonC2DeviceMessage/inputs/input1\")"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    }
+  }
+}
